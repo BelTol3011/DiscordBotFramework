@@ -94,11 +94,17 @@ class App:
 
     def route(self, alias: str, only_from_users: list[int] = None, only_from_roles: list[int] = None,
               do_log: bool = False, print_unauthorized: bool = False, raw_args: bool = False, typing: bool = False,
-              member_arg: bool = False):
+              member_arg: bool = False, only_on_servers: bool = False):
         only_from_roles = None if only_from_roles is None else set(only_from_roles)
+
+        if not only_on_servers and (only_from_roles or member_arg):
+            raise Exception("Invalid argument combination")
 
         def decorator(func: Callable):
             async def wrapper(client: discord.Client, message: discord.Message, end: int):
+                if message.guild is None and only_on_servers:
+                    return
+
                 member: discord.Member = message.guild.get_member(message.author.id)
 
                 if member is None and (only_from_users or only_from_roles) or member_arg:
