@@ -93,7 +93,7 @@ class App:
         self.message_number = 0
 
     def route(self, alias: str, only_from_users: list[int] = None, only_from_roles: list[int] = None,
-              do_log: bool = False, print_unauthorized: bool = False, raw_args: bool = False):
+              do_log: bool = False, print_unauthorized: bool = False, raw_args: bool = False, typing: bool = False):
         only_from_roles = None if only_from_roles is None else set(only_from_roles)
 
         def decorator(func: Callable):
@@ -122,15 +122,20 @@ class App:
 
                 kwargs = {}
 
-                if do_log:
-                    log_object = await Log.create(message)
-                    with Logger(f"{self.message_number}", log_function=log_object.log):
-                        await func(client, message, *args, **kwargs)
-                    await log_object.close()
-                else:
-                    with Logger(f"{self.message_number}"):
-                        await func(client, message, *args, **kwargs)
-
+                if typing:
+                    await message.channel.typing().__aenter__()
+                try:
+                    if do_log:
+                        log_object = await Log.create(message)
+                        with Logger(f"{self.message_number}", log_function=log_object.log):
+                            await func(client, message, *args, **kwargs)
+                        await log_object.close()
+                    else:
+                        with Logger(f"{self.message_number}"):
+                            await func(client, message, *args, **kwargs)
+                finally:
+                    if typing:
+                        await message.channel.typing().__aexit__()
             self.commands.update({alias: wrapper})
             return wrapper
 
@@ -161,10 +166,9 @@ class App:
                 log(f"Relevant message recieved: {message.content}:")
                 log(f"Decided on {message.content[:end]}, argstr is {message.content[end:]}")
 
-                async with message.channel.typing():
-                    log("Running wrapper:")
-                    await self.commands[record_alias](client, message, end)
-                    log(":Finished!")
+                log("Running wrapper:")
+                await self.commands[record_alias](client, message, end)
+                log(":Finished!")
 
             except Exception:
                 err = traceback.format_exc()
