@@ -1,9 +1,9 @@
 from setuptools import setup
 
 setup(
-    name='belissibot_framwork',
+    name='belissibot_framework',
     version='1.0',
-    packages=['belissibot_framwork'],
+    packages=['belissibot_framework'],
     url='',
     license='',
     author='Belissimo',
