@@ -142,7 +142,7 @@ class App:
         async def on_ready():
             log(f'{client.user} has connected to Discord!')
             if game:
-                await client.change_presence(activity=discord.Game(name="!wörterbuch"))
+                await client.change_presence(activity=discord.Game(name=game))
 
         @client.event
         async def on_message(message: discord.Message):
