@@ -1,0 +1,3 @@
+setuptools
+discord
+git+git://github.com/BelTol3011/context_logger
