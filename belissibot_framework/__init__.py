@@ -99,7 +99,7 @@ class App:
 
         def decorator(func: Callable):
             async def wrapper(client: discord.Client, message: discord.Message, end: int):
-                member: discord.Member = await message.guild.get_member(message.author)
+                member: discord.Member = message.guild.get_member(message.author)
 
                 if (message.author.id not in only_from_users or
                     not set([role.id for role in member.roles]) & only_from_roles) \
@@ -129,13 +129,14 @@ class App:
 
         return decorator
 
-    def run(self, discord_token):
+    def run(self, discord_token, game: str = None):
         client = discord.Client()
 
         @client.event
         async def on_ready():
             log(f'{client.user} has connected to Discord!')
-            await client.change_presence(activity=discord.Game(name="!wörterbuch"))
+            if game:
+                await client.change_presence(activity=discord.Game(name="!wörterbuch"))
 
         @client.event
         async def on_message(message: discord.Message):
