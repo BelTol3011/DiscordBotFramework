@@ -122,10 +122,12 @@ class App:
                         member_arg_list = [member]
 
                 if ((only_from_users and (message.author.id not in only_from_users)) or
-                    not (only_from_roles and (set([role.id for role in member.roles]) & only_from_roles))) \
+                    not (only_from_roles and ({role.id for role in member.roles} & only_from_roles))) \
                         and print_unauthorized:
+                    log(f"Unauthorized: {only_from_users!r}, {only_from_roles!r}, {member.roles!r}")
                     await message.channel.send(embed=construct_unauthorized_embed(message.author),
-                                               reference=message)
+                                               reference=message, delete_after=30)
+                    return
 
                 if not raw_args:
                     args = parse_py_args(message.content[end:])
