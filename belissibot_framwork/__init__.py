@@ -55,9 +55,9 @@ class Log:
                                     embed=self.get_log_embed())
 
 
-def construct_unauthorized_embed(unauthorized_user: discord.User, authorized_user: discord.User):
+def construct_unauthorized_embed(unauthorized_user: discord.User):
     return discord.Embed(title="Unauthorized", color=discord.Color(0xFFA000),
-                         description=f"You ({unauthorized_user}) are not {authorized_user}.")
+                         description=f"You ({unauthorized_user}) are unathorized to perform this action.")
 
 
 def construct_error_embed(err: str):
@@ -92,12 +92,18 @@ class App:
         self.commands: dict[str: Awaitable] = {}
         self.message_number = 0
 
-    def route(self, alias: str, only_from: int = None, do_log: bool = False):
+    def route(self, alias: str, only_from_users: list[int] = None, only_from_roles: list[int] = None,
+              do_log: bool = False, print_unauthorized: bool = False):
+        only_from_users = [] if only_from_users is None else only_from_users
+        only_from_roles = {} if only_from_roles is None else set(only_from_roles)
+
         def decorator(func: Callable):
             async def wrapper(client: discord.Client, message: discord.Message, *args, **kwargs):
-                if message.author.id != only_from and only_from:
-                    only_from_user = await client.fetch_user(only_from)
-                    await message.channel.send(embed=construct_unauthorized_embed(message.author, only_from_user),
+                member: discord.Member = await message.guild.get_member(message.author)
+
+                if message.author.id not in only_from_users or \
+                        not set([role.id for role in member.roles]) & only_from_roles:
+                    await message.channel.send(embed=construct_unauthorized_embed(message.author),
                                                reference=message)
 
                 if do_log:
