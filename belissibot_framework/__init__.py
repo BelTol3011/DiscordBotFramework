@@ -155,8 +155,11 @@ class App:
 
         return decorator
 
-    def run(self, discord_token, game: str = None):
-        client = discord.Client()
+    def run(self, discord_token, game: str = None, intents: discord.Intents = None):
+        if intents:
+            client = discord.Client(intents=intents)
+        else:
+            client = discord.Client()
 
         @client.event
         async def on_ready():
