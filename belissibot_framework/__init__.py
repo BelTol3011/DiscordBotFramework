@@ -94,15 +94,14 @@ class App:
 
     def route(self, alias: str, only_from_users: list[int] = None, only_from_roles: list[int] = None,
               do_log: bool = False, print_unauthorized: bool = False, raw_args: bool = False):
-        only_from_users = [] if only_from_users is None else only_from_users
-        only_from_roles = {} if only_from_roles is None else set(only_from_roles)
+        only_from_roles = None if only_from_roles is None else set(only_from_roles)
 
         def decorator(func: Callable):
             async def wrapper(client: discord.Client, message: discord.Message, end: int):
                 member: discord.Member = message.guild.get_member(message.author)
 
-                if (message.author.id not in only_from_users or
-                    not set([role.id for role in member.roles]) & only_from_roles) \
+                if ((message.author.id not in only_from_users and only_from_users) or
+                    not (set([role.id for role in member.roles]) & only_from_roles) and only_from_roles) \
                         and print_unauthorized:
                     await message.channel.send(embed=construct_unauthorized_embed(message.author),
                                                reference=message)
