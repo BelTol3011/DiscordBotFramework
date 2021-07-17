@@ -101,10 +101,11 @@ class App:
                 member: discord.Member = message.guild.get_member(message.author.id)
 
                 if member is None and (only_from_users or only_from_roles):
-                    message.channel.send(embed=discord.Embed(title="Not enough permissions",
-                                                             description=f"Couldn't fetch member {message.author} with "
-                                                                         f"id `{message.author.id}`",
-                                                             color=discord.Color(0xFF0000)))
+                    await message.channel.send(
+                        embed=discord.Embed(title="Not enough permissions",
+                                            description=f"Couldn't fetch member {message.author} with id "
+                                                        f"`{message.author.id}`",
+                                            color=discord.Color(0xFF0000)))
                     return
 
                 if ((only_from_users and (message.author.id not in only_from_users)) or
