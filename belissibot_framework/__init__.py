@@ -98,7 +98,7 @@ class App:
 
         def decorator(func: Callable):
             async def wrapper(client: discord.Client, message: discord.Message, end: int):
-                member: discord.Member = message.guild.get_member(message.author)
+                member: discord.Member = message.guild.get_member(message.author.id)
 
                 if ((only_from_users and (message.author.id not in only_from_users)) or
                     not (only_from_roles and (set([role.id for role in member.roles]) & only_from_roles))) \
