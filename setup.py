@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name='DiscordBotFramework',
+    name='belissibot_framwork',
     version='1.0',
     packages=['belissibot_framwork'],
     url='',
