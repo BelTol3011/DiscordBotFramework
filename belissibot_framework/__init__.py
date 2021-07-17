@@ -93,20 +93,23 @@ class App:
         self.message_number = 0
 
     def route(self, alias: str, only_from_users: list[int] = None, only_from_roles: list[int] = None,
-              do_log: bool = False, print_unauthorized: bool = False, raw_args: bool = False, typing: bool = False):
+              do_log: bool = False, print_unauthorized: bool = False, raw_args: bool = False, typing: bool = False,
+              member_arg: bool = False):
         only_from_roles = None if only_from_roles is None else set(only_from_roles)
 
         def decorator(func: Callable):
             async def wrapper(client: discord.Client, message: discord.Message, end: int):
                 member: discord.Member = message.guild.get_member(message.author.id)
 
-                if member is None and (only_from_users or only_from_roles):
+                if member is None and (only_from_users or only_from_roles) or member_arg:
                     await message.channel.send(
                         embed=discord.Embed(title="Not enough permissions",
                                             description=f"Couldn't fetch member {message.author} with id "
                                                         f"`{message.author.id}`",
                                             color=discord.Color(0xFF0000)))
                     return
+
+                member_arg_list = [member] if member_arg else []
 
                 if ((only_from_users and (message.author.id not in only_from_users)) or
                     not (only_from_roles and (set([role.id for role in member.roles]) & only_from_roles))) \
@@ -128,11 +131,11 @@ class App:
                     if do_log:
                         log_object = await Log.create(message)
                         with Logger(f"{self.message_number}", log_function=log_object.log):
-                            await func(client, message, *args, **kwargs)
+                            await func(client, message, *member_arg_list, *args, **kwargs)
                         await log_object.close()
                     else:
                         with Logger(f"{self.message_number}"):
-                            await func(client, message, *args, **kwargs)
+                            await func(client, message, *member_arg_list, *args, **kwargs)
                 finally:
                     if typing:
                         await message.channel.typing().__aexit__()
