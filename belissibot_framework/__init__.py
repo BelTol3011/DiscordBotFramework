@@ -105,17 +105,21 @@ class App:
                 if message.guild is None and only_on_servers:
                     return
 
-                member: discord.Member = message.guild.get_member(message.author.id)
+                member = None
+                if only_from_roles or member_arg:
+                    member: discord.Member = message.guild.get_member(message.author.id)
 
-                if member is None and (only_from_users or only_from_roles) or member_arg:
-                    await message.channel.send(
-                        embed=discord.Embed(title="Not enough permissions",
-                                            description=f"Couldn't fetch member {message.author} with id "
-                                                        f"`{message.author.id}`",
-                                            color=discord.Color(0xFF0000)))
-                    return
+                    if member is None:
+                        await message.channel.send(
+                            embed=discord.Embed(title="Not enough permissions",
+                                                description=f"Couldn't fetch member {message.author} with id "
+                                                            f"`{message.author.id}`",
+                                                color=discord.Color(0xFF0000)))
+                        return
 
-                member_arg_list = [member] if member_arg else []
+                    member_arg_list = [member]
+                else:
+                    member_arg_list = []
 
                 if ((only_from_users and (message.author.id not in only_from_users)) or
                     not (only_from_roles and (set([role.id for role in member.roles]) & only_from_roles))) \
@@ -145,6 +149,7 @@ class App:
                 finally:
                     if typing:
                         await message.channel.typing().__aexit__()
+
             self.commands.update({alias: wrapper})
             return wrapper
 
