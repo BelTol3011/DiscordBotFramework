@@ -73,7 +73,7 @@ def construct_error_embed(err: str):
                          color=discord.Color(0xFF0000))
 
 
-def parse_args(message: str):
+def parse_py_args(message: str):
     # TODO: remove remote code execution
     args = []
     start = 0
@@ -93,18 +93,27 @@ class App:
         self.message_number = 0
 
     def route(self, alias: str, only_from_users: list[int] = None, only_from_roles: list[int] = None,
-              do_log: bool = False, print_unauthorized: bool = False):
+              do_log: bool = False, print_unauthorized: bool = False, raw_args: bool = False):
         only_from_users = [] if only_from_users is None else only_from_users
         only_from_roles = {} if only_from_roles is None else set(only_from_roles)
 
         def decorator(func: Callable):
-            async def wrapper(client: discord.Client, message: discord.Message, *args, **kwargs):
+            async def wrapper(client: discord.Client, message: discord.Message, end: int):
                 member: discord.Member = await message.guild.get_member(message.author)
 
-                if message.author.id not in only_from_users or \
-                        not set([role.id for role in member.roles]) & only_from_roles:
+                if (message.author.id not in only_from_users or
+                    not set([role.id for role in member.roles]) & only_from_roles) \
+                        and print_unauthorized:
                     await message.channel.send(embed=construct_unauthorized_embed(message.author),
                                                reference=message)
+
+                if not raw_args:
+                    args = parse_py_args(message.content[end:])
+                    log(f"Parsed args: {args!r}")
+                else:
+                    args = [message.content[end:]]
+
+                kwargs = {}
 
                 if do_log:
                     log_object = await Log.create(message)
@@ -141,16 +150,13 @@ class App:
                     return
                 end = len(record_alias) + 1
 
-                with log(f"Relevant message recieved: {message.content}"):
-                    log(f"Decided on {message.content[:end]}, argstr is {message.content[end:]}")
+                log(f"Relevant message recieved: {message.content}:")
+                log(f"Decided on {message.content[:end]}, argstr is {message.content[end:]}")
 
-                    args = parse_args(message.content[end:])
-                    log(f"Parsed args: {args!r}")
-
-                    async with message.channel.typing():
-                        with log("Running command"):
-                            await self.commands[record_alias](client, message, *args)
-                        log("Finished!")
+                async with message.channel.typing():
+                    log("Running wrapper:")
+                    await self.commands[record_alias](client, message, end)
+                    log(":Finished!")
 
             except Exception:
                 err = traceback.format_exc()
