@@ -100,8 +100,8 @@ class App:
             async def wrapper(client: discord.Client, message: discord.Message, end: int):
                 member: discord.Member = message.guild.get_member(message.author)
 
-                if ((message.author.id not in only_from_users and only_from_users) or
-                    not (set([role.id for role in member.roles]) & only_from_roles) and only_from_roles) \
+                if ((only_from_users and (message.author.id not in only_from_users)) or
+                    not (only_from_roles and (set([role.id for role in member.roles]) & only_from_roles))) \
                         and print_unauthorized:
                     await message.channel.send(embed=construct_unauthorized_embed(message.author),
                                                reference=message)
