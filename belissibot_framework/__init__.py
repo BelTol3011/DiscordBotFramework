@@ -117,7 +117,8 @@ class App:
                                                 color=discord.Color(0xFF0000)))
                         return
 
-                    member_arg_list = [member]
+                    if member_arg:
+                        member_arg_list = [member]
                 else:
                     member_arg_list = []
 
