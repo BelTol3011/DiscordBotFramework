@@ -121,7 +121,6 @@ class App:
                     if member_arg:
                         member_arg_list = [member]
 
-
                 if ((only_from_users and (message.author.id not in only_from_users)) or
                     not (only_from_roles and (set([role.id for role in member.roles]) & only_from_roles))) \
                         and print_unauthorized:
