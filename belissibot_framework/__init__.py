@@ -91,7 +91,7 @@ def parse_py_args(message: str):
 
 
 class App:
-    def __init__(self, intents):
+    def __init__(self):
         self.commands: dict[str: Awaitable] = {}
         self.message_number = 0
 
