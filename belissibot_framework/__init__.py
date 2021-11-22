@@ -3,10 +3,10 @@ import random
 import sys
 import traceback
 from asyncio import Event
-from typing import Awaitable, Callable, Optional
+from typing import Awaitable, Callable, Optional, Any
 
 import discord
-from context_logger import Logger, log
+from context_logger import Logger, log, BaseIndent, STD_SPACE_INDENT
 
 
 def contruct_log_embed(log_: list[str]):
@@ -37,11 +37,14 @@ class Log:
     def get_log_embed(self):
         return contruct_log_embed(self.log_list)
 
-    def log(self, message: str, prefix: str, indentation: int):
-        msg = prefix + ": " + (" " * indentation) + message
-        print(msg)
+    def log(self, message_str: str, _, prefix: str, nlist: list[int], indent: BaseIndent):
+        msg = f"{prefix}: {indent(nlist)}{message_str}"
+        self.msg(msg)
+
+    def msg(self, msg: str):
         self.log_list.append(msg)
         self.event.set()
+        print(msg)
 
     async def mainloop(self):
         while self.loop:
@@ -50,7 +53,7 @@ class Log:
 
     async def close(self, delete_after: int = 2 * 60):
         self.loop = False
-        self.log("Closing (the end)", "", 0)
+        self.msg("END")
         await self.log_message.edit(content=f"Gets auto deleted after {delete_after} s.", delete_after=delete_after,
                                     embed=self.get_log_embed())
 
@@ -88,7 +91,7 @@ def parse_py_args(message: str):
 
 
 class App:
-    def __init__(self):
+    def __init__(self, intents):
         self.commands: dict[str: Awaitable] = {}
         self.message_number = 0
 
@@ -142,7 +145,7 @@ class App:
                 try:
                     if do_log:
                         log_object = await Log.create(message)
-                        with Logger(f"{self.message_number}", log_function=log_object.log):
+                        with Logger(f"{self.message_number}", log_function=log_object.log, indent=STD_SPACE_INDENT):
                             await func(client, message, *member_arg_list, *args, **kwargs)
                         await log_object.close()
                     else:
