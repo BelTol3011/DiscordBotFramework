@@ -156,7 +156,11 @@ class App:
                         await message.channel.typing().__aexit__()
 
                 if delete_message:
-                    await message.delete()
+                    try:
+                        await message.delete()
+                    except discord.NotFound:
+                        # message was already deleted by func
+                        ...
 
             self.commands.update({alias: wrapper})
             return wrapper
