@@ -50,7 +50,11 @@ class Log:
     async def mainloop(self):
         while self.loop:
             await self.event.wait()
-            await self.log_message.edit(embed=self.get_log_embed())
+            try:
+                await self.log_message.edit(embed=self.get_log_embed())
+            except discord.HTTPException:
+                self.log_list = ["LOG TOO LONG FOR DISCORD :("]
+                self.event.set()
 
     async def close(self, delete_after: int = 2 * 60):
         self.loop = False
@@ -66,10 +70,10 @@ def construct_unauthorized_embed(unauthorized_user: discord.User):
 
 def construct_error_embed(err: str):
     # BTW, https://en.wikipedia.org/wiki/Minced_oath
-    messages = ["Snap!", "Shoot!", "Shucks!", "Shizer!", "Darn!", "Frick!", "Juck!", "Dang!", "Frack!", "Frak!",
-                "Frig!", "Fug!", "F!", "my gosh!"]
+    messages = ["Snap", "Shoot", "Shucks", "Shizer", "Darn", "Frick", "Juck", "Dang", "Frack", "Frak",
+                "Frig", "Fug", "F", "my gosh"]
     return discord.Embed(title="Error",
-                         description=f"{random.choice(['Oh ', 'Aw ', ''])}{random.choice(messages)} Something went "
+                         description=f"{random.choice(['Oh ', 'Aw ', ''])}{random.choice(messages)}! Something went "
                                      f"wrong:\n```{err}```"
                                      f"Don't be scared to read the error, most are simple mistakes and "
                                      f"can be easily resolved! 🧐. Sometimes, trying again 🔁 helps! Also make sure to "
@@ -77,16 +81,17 @@ def construct_error_embed(err: str):
                          color=discord.Color(0xFF0000))
 
 
-def construct_help_embed(command: str, description: str, example: str, **args: Union[tuple[str, str], str]):
+def construct_help_embed(command: str, description: str, example_: str, argstr: str = None,
+                         **args: Union[tuple[str, str], str]):
     argstr = ' '.join([
         (f'<{arg}: {desc_or_type[1]}>' if isinstance(desc_or_type, tuple) else f'<{arg}>')
         for arg, desc_or_type in args.items()
-    ])
+    ]) if argstr is None else argstr
 
     out = discord.Embed(title=f"Usage of `{command}`",
                         description=f"{description}\n\n"
                                     f"__Usage:__ ```\n{command} {argstr}```\n"
-                                    f"__Example:__```\n{example}```",
+                                    f"__Example:__```\n{example_}```",
                         color=discord.Color(0xFFFF00))
 
     for arg, desc in args.items():
@@ -94,6 +99,8 @@ def construct_help_embed(command: str, description: str, example: str, **args: U
             desc, _ = desc
 
         out.add_field(name=arg, value=desc)
+
+    out.set_footer(text="This help embed was created using the construct_help_embed function.")
 
     return out
 
@@ -193,7 +200,7 @@ class App:
 
         return decorator
 
-    def add_help(self, command: str, description: str, example: str, route_kwargs: dict = None,
+    def add_help(self, command: str, description: str, example_: str, argstr: str = None, route_kwargs: dict = None,
                  send_kwargs: dict = None, **arg_descriptions):
         route_kwargs = {"raw_args": True} if route_kwargs is None else route_kwargs
         send_kwargs = {} if send_kwargs is None else send_kwargs
@@ -207,7 +214,8 @@ class App:
                     embed=construct_help_embed(
                         command=command,
                         description=description,
-                        example=example,
+                        example_=example_,
+                        argstr=argstr,
                         **{arg: (arg_desc, arg_annotations[arg].__name__) if arg in arg_annotations else arg_desc
                            for arg, arg_desc in arg_descriptions.items()}),
                     **send_kwargs
