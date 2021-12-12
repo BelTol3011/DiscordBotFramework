@@ -95,9 +95,9 @@ class App:
         self.commands: dict[str: Awaitable] = {}
         self.message_number = 0
 
-    def route(self, alias: str, only_from_users: list[int] = None, only_from_roles: list[int] = None,
+    def route(self, alias: str, *, only_from_users: list[int] = None, only_from_roles: list[int] = None,
               do_log: bool = False, print_unauthorized: bool = False, raw_args: bool = False, typing: bool = False,
-              member_arg: bool = False, only_on_servers: bool = False):
+              member_arg: bool = False, only_on_servers: bool = False, delete_message: bool = True):
         if not only_on_servers and (only_from_roles or member_arg):
             raise Exception("Invalid argument combination")
 
@@ -154,6 +154,9 @@ class App:
                 finally:
                     if typing:
                         await message.channel.typing().__aexit__()
+
+                if delete_message:
+                    await message.delete()
 
             self.commands.update({alias: wrapper})
             return wrapper
