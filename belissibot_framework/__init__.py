@@ -158,7 +158,7 @@ class App:
                 if delete_message:
                     try:
                         await message.delete()
-                    except discord.NotFound:
+                    except (discord.NotFound, discord.Forbidden):
                         # message was already deleted by func
                         ...
 
