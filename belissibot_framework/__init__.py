@@ -163,7 +163,7 @@ class App:
                         ...
 
             self.commands.update({alias: wrapper})
-            return wrapper
+            return func
 
         return decorator
 
