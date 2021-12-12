@@ -1,9 +1,10 @@
 import asyncio
+import inspect
 import random
 import sys
 import traceback
 from asyncio import Event
-from typing import Awaitable, Callable, Optional, Any
+from typing import Awaitable, Callable, Optional, Union
 
 import discord
 from context_logger import Logger, log, BaseIndent, STD_SPACE_INDENT
@@ -76,11 +77,33 @@ def construct_error_embed(err: str):
                          color=discord.Color(0xFF0000))
 
 
+def construct_help_embed(command: str, description: str, example: str, **args: Union[tuple[str, str], str]):
+    argstr = ' '.join([
+        (f'<{arg}: {desc_or_type[1]}>' if isinstance(desc_or_type, tuple) else f'<{arg}>')
+        for arg, desc_or_type in args.items()
+    ])
+
+    out = discord.Embed(title=f"Usage of `{command}`",
+                        description=f"{description}\n\n"
+                                    f"__Usage:__ ```\n{command} {argstr}```\n"
+                                    f"__Example:__```\n{example}```",
+                        color=discord.Color(0xFFFF00))
+
+    for arg, desc in args.items():
+        if isinstance(desc, tuple):
+            desc, _ = desc
+
+        out.add_field(name=arg, value=desc)
+
+    return out
+
+
 def parse_py_args(message: str):
     # TODO: remove remote code execution
     args = []
     start = 0
     for i in range(len(message)):
+        # noinspection PyBroadException
         try:
             arg = eval(message[start:i + 1])
             args.append(arg)
@@ -99,7 +122,8 @@ class App:
               do_log: bool = False, print_unauthorized: bool = False, raw_args: bool = False, typing: bool = False,
               member_arg: bool = False, only_on_servers: bool = False, delete_message: bool = True):
         if not only_on_servers and (only_from_roles or member_arg):
-            raise Exception("Invalid argument combination")
+            raise Exception("Invalid argument combination: only_on_servers needs to be activated in order to be able"
+                            "to use only_from_roles or member_arg, since these features only make sense on a server.")
 
         only_from_roles = None if only_from_roles is None else set(only_from_roles)
 
@@ -108,6 +132,7 @@ class App:
                 if message.guild is None and only_on_servers:
                     return
 
+                # noinspection PyTypeChecker
                 member = None
                 member_arg_list = []
                 if only_from_roles or member_arg:
@@ -159,10 +184,34 @@ class App:
                     try:
                         await message.delete()
                     except (discord.NotFound, discord.Forbidden):
-                        # message was already deleted by func
+                        # message was already deleted by func or we're in a DM channel, or we just aren't allowed to
+                        # delete
                         ...
 
             self.commands.update({alias: wrapper})
+            return func
+
+        return decorator
+
+    def add_help(self, command: str, description: str, example: str, route_kwargs: dict = None,
+                 send_kwargs: dict = None, **arg_descriptions):
+        route_kwargs = {"raw_args": True} if route_kwargs is None else route_kwargs
+        send_kwargs = {} if send_kwargs is None else send_kwargs
+
+        def decorator(func):
+            @self.route(f"{command} help", **route_kwargs)
+            async def help_func(client: discord.Client, message: discord.Message, _=""):
+                _, _, _, _, _, _, arg_annotations = inspect.getfullargspec(func)
+
+                await message.channel.send(
+                    embed=construct_help_embed(
+                        command=command,
+                        description=description,
+                        example=example,
+                        **{arg: (arg_desc, arg_annotations[arg].__name__) if arg in arg_annotations else arg_desc
+                           for arg, arg_desc in arg_descriptions.items()}),
+                    **send_kwargs
+                )
             return func
 
         return decorator
