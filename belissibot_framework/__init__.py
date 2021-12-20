@@ -5,6 +5,7 @@ import sys
 import traceback
 from asyncio import Event
 from typing import Awaitable, Callable, Optional, Union
+import ast
 
 import discord
 from context_logger import Logger, log, BaseIndent, STD_SPACE_INDENT
@@ -106,13 +107,12 @@ def construct_help_embed(command: str, description: str, example_: str, argstr: 
 
 
 def parse_py_args(message: str):
-    # TODO: remove remote code execution
     args = []
     start = 0
     for i in range(len(message)):
         # noinspection PyBroadException
         try:
-            arg = eval(message[start:i + 1])
+            arg = ast.literal_eval(message[start:i + 1])
             args.append(arg)
             start = i + 1
         except Exception:
