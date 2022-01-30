@@ -259,7 +259,10 @@ class App:
         async def on_message(message: discord.Message):
             self.message_number += 1
 
-            asyncio.create_task(asyncio.gather(*[func(client, message) for func in self.on_messages]))
+            async def on_messages_coro():
+                await asyncio.gather(*[func(client, message) for func in self.on_messages])
+
+            asyncio.create_task(on_messages_coro())
 
             try:
                 record_alias: Optional[str] = None
