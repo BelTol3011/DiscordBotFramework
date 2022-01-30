@@ -249,8 +249,8 @@ class App:
                     return
                 end = len(record_alias) + 1
 
-                log(f"Relevant message recieved: {message.content}:")
-                log(f"Decided on {message.content[:end]}, argstr is {message.content[end:]}")
+                log(f"Relevant message recieved: {message.content!r}:")
+                log(f"Decided on {message.content[:end]!r}, argstr is {message.content[end:]!r}")
 
                 log("Running wrapper:")
                 await self.commands[record_alias](client, message, end)
