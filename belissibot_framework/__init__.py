@@ -106,17 +106,23 @@ def construct_help_embed(command: str, description: str, example_: str, argstr: 
     return out
 
 
-def parse_py_args(message: str):
+def parse_py_args(_message: str):
     args = []
-    start = 0
-    for i in range(len(message)):
+
+    message = _message.split()
+
+    i = 0
+    while i < len(message):
         # noinspection PyBroadException
         try:
-            arg = ast.literal_eval(message[start:i + 1])
+            arg = ast.literal_eval(" ".join(message[:i + 1]))
+
             args.append(arg)
-            start = i + 1
+            del message[:i + 1]
+            i = 0
         except Exception:
-            ...
+            print(message[:i])
+            i += 1
     return args
 
 
