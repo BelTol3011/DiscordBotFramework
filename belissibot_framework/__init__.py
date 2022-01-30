@@ -124,6 +124,18 @@ class App:
     def __init__(self):
         self.commands: dict[str: Awaitable] = {}
         self.message_number = 0
+        self.on_messages = []
+
+    def on_message(self):
+        def decorator(func):
+            self.on_messages.append(func)
+
+            async def wrapper(client: discord.Client, message: discord.Message):
+                await func(client, message)
+
+            return wrapper
+
+        return decorator
 
     def route(self, alias: str, *, only_from_users: list[int] = None, only_from_roles: list[int] = None,
               do_log: bool = False, print_unauthorized: bool = False, raw_args: bool = False, typing: bool = False,
@@ -220,6 +232,7 @@ class App:
                            for arg, arg_desc in arg_descriptions.items()}),
                     **send_kwargs
                 )
+
             return func
 
         return decorator
@@ -239,6 +252,8 @@ class App:
         @client.event
         async def on_message(message: discord.Message):
             self.message_number += 1
+
+            asyncio.create_task(asyncio.gather(*[func(client, message) for func in self.on_messages]))
 
             try:
                 record_alias: Optional[str] = None
