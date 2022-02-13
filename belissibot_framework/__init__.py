@@ -276,8 +276,9 @@ class App:
                 log(f"Relevant message recieved: {message.content!r}:")
                 log(f"Decided on {message.content[:end]!r}, argstr is {message.content[end:]!r}")
 
-                log("Running wrapper:")
-                await self.commands[record_alias](client, message, end)
+                with log("Running wrapper"):
+                    await self.commands[record_alias](client, message, end)
+                
                 log(":Finished!")
 
             except Exception:
