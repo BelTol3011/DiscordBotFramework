@@ -7,6 +7,7 @@ from asyncio import Event
 from typing import Awaitable, Callable, Optional, Union
 import ast
 
+import context_logger
 import discord
 from context_logger import Logger, log, BaseIndent, STD_SPACE_INDENT
 
@@ -46,22 +47,24 @@ class Log:
     def msg(self, msg: str):
         self.log_list.append(msg)
         self.event.set()
-        print(msg)
+
+    async def safe_edit(self, **kwargs):
+        try:
+            await self.log_message.edit(**kwargs)
+        except discord.HTTPException:
+            self.log_list = ["LOG TOO LONG FOR DISCORD :("]
+            self.event.set()
 
     async def mainloop(self):
         while self.loop:
             await self.event.wait()
-            try:
-                await self.log_message.edit(embed=self.get_log_embed())
-            except discord.HTTPException:
-                self.log_list = ["LOG TOO LONG FOR DISCORD :("]
-                self.event.set()
+            await self.safe_edit(embed=self.get_log_embed())
 
     async def close(self, delete_after: int = 2 * 60):
         self.loop = False
         self.msg("END")
-        await self.log_message.edit(content=f"Gets auto deleted after {delete_after} s.", delete_after=delete_after,
-                                    embed=self.get_log_embed())
+        await self.safe_edit(content=f"Gets auto deleted after {delete_after} s.", delete_after=delete_after,
+                             embed=self.get_log_embed())
 
 
 def construct_unauthorized_embed(unauthorized_user: discord.User):
@@ -101,7 +104,7 @@ def construct_help_embed(command: str, description: str, example_: str, argstr: 
 
         out.add_field(name=arg, value=desc)
 
-    out.set_footer(text="This help embed was created using the construct_help_embed function.")
+    # out.set_footer(text="This help embed was created using the construct_help_embed function.")
 
     return out
 
@@ -126,6 +129,13 @@ def parse_py_args(_message: str):
     return args
 
 
+def change_corofuncname_to_on_message(corofunc):
+    async def on_message(*args, **kwargs):
+        return await corofunc(*args, **kwargs)
+
+    return on_message
+
+
 class App:
     def __init__(self):
         self.commands: dict[str: Awaitable] = {}
@@ -144,15 +154,16 @@ class App:
         return decorator
 
     def route(self, alias: str, *, only_from_users: list[int] = None, only_from_roles: list[int] = None,
-              do_log: bool = False, print_unauthorized: bool = False, raw_args: bool = False, typing: bool = False,
+              do_log: bool = False, print_unauthorized: bool = False, raw_args: bool = False, typing: bool = True,
               member_arg: bool = False, only_on_servers: bool = False, delete_message: bool = True):
         if not only_on_servers and (only_from_roles or member_arg):
             raise Exception("Invalid argument combination: only_on_servers needs to be activated in order to be able"
-                            "to use only_from_roles or member_arg, since these features only make sense on a server.")
+                            "to use only_from_roles or member_arg since these features only make sense on a server.")
 
         only_from_roles = None if only_from_roles is None else set(only_from_roles)
 
         def decorator(func: Callable):
+            @context_logger.async_safe
             async def wrapper(client: discord.Client, message: discord.Message, end: int):
                 if message.guild is None and only_on_servers:
                     return
@@ -190,20 +201,31 @@ class App:
 
                 kwargs = {}
 
+                typing_ctxtmgr = message.channel.typing()
+
                 if typing:
-                    await message.channel.typing().__aenter__()
+                    await typing_ctxtmgr.__aenter__()
                 try:
                     if do_log:
                         log_object = await Log.create(message)
-                        with Logger(f"{self.message_number}", log_function=log_object.log, indent=STD_SPACE_INDENT):
-                            await func(client, message, *member_arg_list, *args, **kwargs)
-                        await log_object.close()
+                        try:
+                            with Logger(
+                                    f"{self.message_number}",
+                                    log_function=context_logger.both(log_object.log, context_logger.std_log_function),
+                                    indent=STD_SPACE_INDENT):
+                                await func(client, message, *member_arg_list, *args, **kwargs)
+                        finally:
+                            await log_object.close()
                     else:
-                        with Logger(f"{self.message_number}"):
-                            await func(client, message, *member_arg_list, *args, **kwargs)
+                        @context_logger.async_safe
+                        async def run_func():
+                            with Logger(f"MSG {self.message_number}"):
+                                await func(client, message, *member_arg_list, *args, **kwargs)
+
+                        await run_func()
                 finally:
                     if typing:
-                        await message.channel.typing().__aexit__()
+                        await typing_ctxtmgr.__aexit__(None, None, None)
 
                 if delete_message:
                     try:
@@ -256,9 +278,9 @@ class App:
                 await client.change_presence(activity=discord.Game(name=game))
 
         @client.event
+        @change_corofuncname_to_on_message
+        @context_logger.async_safe
         async def on_message(message: discord.Message):
-            self.message_number += 1
-
             async def on_messages_coro():
                 await asyncio.gather(*[func(client, message) for func in self.on_messages])
 
@@ -271,14 +293,16 @@ class App:
                         record_alias = alias
                 if record_alias is None:
                     return
+                self.message_number += 1
+
                 end = len(record_alias) + 1
 
                 log(f"Relevant message recieved: {message.content!r}:")
                 log(f"Decided on {message.content[:end]!r}, argstr is {message.content[end:]!r}")
 
-                log("Running wrapper:")
-                await self.commands[record_alias](client, message, end)
-                log(":Finished!")
+                with log("Running wrapper"):
+                    await self.commands[record_alias](client, message, end)
+                log("Finished!")
 
             except Exception:
                 err = traceback.format_exc()
