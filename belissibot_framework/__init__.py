@@ -265,12 +265,15 @@ class App:
 
         return decorator
 
-    def run(self, discord_token, game: str = None, intents: discord.Intents = discord.Intents.none()):
+    def run(self, discord_token, game: str = None, intents: discord.Intents = None):
+        if intents is None:
+            intents = discord.Intents.default()
+            intents.message_content = True
         client = discord.Client(intents=intents)
 
         @client.event
         async def on_ready():
-            log(f'{client.user} has connected to Discord!')
+            log(f'{client.user} has connected to Discord! Bot is part of {len(client.guilds)} guilds.')
             if game:
                 await client.change_presence(activity=discord.Game(name=game))
 
@@ -278,6 +281,7 @@ class App:
         @change_corofuncname_to_on_message
         @context_logger.async_safe
         async def on_message(message: discord.Message):
+            print(f"Message recieved with content {message.content!r}")
             async def on_messages_coro():
                 await asyncio.gather(*[func(client, message) for func in self.on_messages])
 
