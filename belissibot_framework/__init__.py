@@ -82,7 +82,14 @@ def construct_bot_error_embed(err: BotError):
     if err.embed:
         return err.embed
 
-    return discord.Embed(title="Error", description=err.message, color=discord.Color(0xFF0000))
+    titles = ["It's your fault, not mine.", "The mistake sits in front of the screen.", "You messed up, here's why.",
+              "Someone of us is smarter than me.", "You F'd up, not me.", "You did a no-no.", "Oh nononononno",
+              "There is something we need to talk about..."]
+
+    emojis = ["😬", "🤡", "🙈🙉🙊", "🤨🤨🤨🤨", "🥸"]
+
+    return discord.Embed(title=random.choice(titles) + " " + random.choice(emojis), description=err.message,
+                         color=discord.Color(0xFF0000))
 
 
 def construct_error_embed(err: str):
