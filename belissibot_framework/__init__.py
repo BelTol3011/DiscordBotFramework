@@ -281,7 +281,6 @@ class App:
         @change_corofuncname_to_on_message
         @context_logger.async_safe
         async def on_message(message: discord.Message):
-            print(f"Message recieved with content {message.content!r}")
             async def on_messages_coro():
                 await asyncio.gather(*[func(client, message) for func in self.on_messages])
 

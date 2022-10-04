@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='belissibot_framework',
-    version='1.1',
+    version='1.2',
     packages=['belissibot_framework'],
     url='',
     license='',
