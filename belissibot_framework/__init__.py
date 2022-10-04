@@ -72,16 +72,29 @@ def construct_unauthorized_embed(unauthorized_user: discord.User):
                          description=f"You ({unauthorized_user}) are unathorized to perform this action.")
 
 
+class BotError(Exception):
+    def __init__(self, message: str, embed: discord.Embed | None = None):
+        self.message = message
+        self.embed = embed
+
+
+def construct_bot_error_embed(err: BotError):
+    if err.embed:
+        return err.embed
+
+    return discord.Embed(title="Error", description=err.message, color=discord.Color(0xFF0000))
+
+
 def construct_error_embed(err: str):
     # BTW, https://en.wikipedia.org/wiki/Minced_oath
     messages = ["Snap", "Shoot", "Shucks", "Shizer", "Darn", "Frick", "Juck", "Dang", "Frack", "Frak",
                 "Frig", "Fug", "F", "my gosh"]
     return discord.Embed(title="Error",
-                         description=f"{random.choice(['Oh ', 'Aw ', ''])}{random.choice(messages)}! Something went "
-                                     f"wrong:\n```{err}```"
-                                     f"Don't be scared to read the error, most are simple mistakes and "
-                                     f"can be easily resolved! 🧐. Sometimes, trying again 🔁 helps! Also make sure to "
-                                     f"not run things in parallel.",
+                         description=f"{random.choice(['Oh ', 'Aw ', 'Oh My '])}{random.choice(messages)}! Something "
+                                     f"went wrong:\n```{err}```"
+                                     f"Don't be scared to read the error, most are simple mistakes and can be easily "
+                                     f"resolved! 🧐. Sometimes, trying again 🔁 helps! Also make sure to not run "
+                                     f"things in parallel.",
                          color=discord.Color(0xFF0000))
 
 
@@ -304,6 +317,8 @@ class App:
                     await self.commands[record_alias](client, message, end)
                 log("Finished!")
 
+            except BotError as e:
+                await message.channel.send(embed=construct_bot_error_embed(e))
             except Exception:
                 err = traceback.format_exc()
                 sys.stderr.write(err)
