@@ -83,7 +83,7 @@ def construct_bot_error_embed(err: BotError):
         return err.embed
 
     titles = ["It's your fault, not mine.", "The mistake sits in front of the screen.", "You messed up, here's why.",
-              "Someone of us is smarter than me.", "You F'd up, not me.", "You did a no-no.", "Oh nononononno",
+              "One of us is dumber than me.", "You F'd up, not me.", "You did a no-no.", "Oh nononononno",
               "There is something we need to talk about..."]
 
     emojis = ["😬", "🤡", "🙈🙉🙊", "🤨🤨🤨🤨", "🥸"]
