@@ -306,29 +306,34 @@ class App:
 
             asyncio.create_task(on_messages_coro())
 
-            try:
-                record_alias: Optional[str] = None
-                for alias in self.commands:
-                    if message.content.startswith(alias) and (not record_alias or len(alias) > len(record_alias)):
-                        record_alias = alias
-                if record_alias is None:
-                    return
-                self.message_number += 1
-
-                end = len(record_alias) + 1
-
-                log(f"Relevant message recieved: {message.content!r}:")
-                log(f"Decided on {message.content[:end]!r}, argstr is {message.content[end:]!r}")
-
-                with log("Running wrapper"):
-                    await self.commands[record_alias](client, message, end)
-                log("Finished!")
-
-            except BotError as e:
-                await message.channel.send(embed=construct_bot_error_embed(e))
-            except Exception:
-                err = traceback.format_exc()
-                sys.stderr.write(err)
-                await message.channel.send(embed=construct_error_embed(err))
+            await self.invoke(message, client)
 
         client.run(discord_token)
+
+    @context_logger.safe
+    async def invoke(self, message, client):
+        record_alias: Optional[str] = None
+        for alias in self.commands:
+            if message.content.startswith(alias) and (not record_alias or len(alias) > len(record_alias)):
+                record_alias = alias
+        if record_alias is None:
+            return
+        self.message_number += 1
+
+        end = len(record_alias) + 1
+
+        log(f"Relevant message recieved: {message.content!r}:")
+        log(f"Decided on {message.content[:end]!r}, argstr is {message.content[end:]!r}")
+
+        try:
+            with log("Running wrapper"):
+                await self.commands[record_alias](client, message, end)
+            log("Finished!")
+
+        except BotError as e:
+            await message.channel.send(embed=construct_bot_error_embed(e))
+
+        except Exception:
+            err = traceback.format_exc()
+            sys.stderr.write(err)
+            await message.channel.send(embed=construct_error_embed(err))
